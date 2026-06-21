@@ -1,0 +1,8 @@
+(* MLton basis file for the sml-rational library.
+ * Consumers can include this file to bring `structure Rational` into scope. *)
+local
+  $(SML_LIB)/basis/basis.mlb
+in
+  rational.sig
+  rational.sml
+end
