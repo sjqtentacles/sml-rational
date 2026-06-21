@@ -1,5 +1,7 @@
 # sml-rational
 
+[![CI](https://github.com/sjqtentacles/sml-rational/actions/workflows/ci.yml/badge.svg)](https://github.com/sjqtentacles/sml-rational/actions/workflows/ci.yml)
+
 Exact rational-number arithmetic for Standard ML.
 
 `sml-rational` provides a `Rational` structure: a `Q`-style fraction type built
@@ -71,6 +73,22 @@ end
   (`-3/4`), not SML's tilde, and an integral value prints without a denominator
   (`5`, not `5/1`). `fromString` accepts either `-` or `~` as the sign.
 
+## Installing with smlpkg
+
+This library follows the conventions of the
+[`smlpkg`](https://github.com/diku-dk/smlpkg) package manager. There is no
+registry or account to sign up for -- packages are referenced directly by
+their git URL. In your own project's directory:
+
+```sh
+smlpkg add github.com/sjqtentacles/sml-rational
+smlpkg sync
+```
+
+This downloads the library into
+`lib/github.com/sjqtentacles/sml-rational/`. Reference its `.mlb` from your
+own `.mlb` with a relative path.
+
 ## Usage
 
 ### MLton
@@ -79,15 +97,15 @@ Include the library's `.mlb` from your own `.mlb`:
 
 ```
 $(SML_LIB)/basis/basis.mlb
-path/to/sml-rational/rational.mlb
+lib/github.com/sjqtentacles/sml-rational/rational.mlb
 your-code.sml
 ```
 
 ### Poly/ML
 
 ```sml
-use "rational.sig";
-use "rational.sml";
+use "lib/github.com/sjqtentacles/sml-rational/rational.sig";
+use "lib/github.com/sjqtentacles/sml-rational/rational.sml";
 ```
 
 ## Building and testing
@@ -96,11 +114,10 @@ The test suite is a dependency-free assertion runner (pure Standard ML) that
 exits non-zero if any assertion fails.
 
 ```sh
-# Type-check the library in isolation
-mlton -stop tc rational.mlb
-
-# Build and run the tests
-mlton test/test.mlb && ./test/test
+make test        # build + run the suite under MLton
+make test-poly   # run the suite under Poly/ML
+make all-tests   # run under both
+make clean
 ```
 
 This library was built test-first (TDD): the signature and the full test suite
@@ -111,11 +128,15 @@ assertion passed (green).
 ## Layout
 
 ```
-rational.sig    the RATIONAL signature (the contract)
-rational.sml    structure Rational :> RATIONAL
-rational.mlb    MLton basis file for consumers
-test/test.sml   assertion-based test suite
-test/test.mlb   MLton basis file for the tests
+sml.pkg                 smlpkg manifest (package name + requires)
+lib/github.com/sjqtentacles/sml-rational/
+  rational.sig          the RATIONAL signature (the contract)
+  rational.sml          structure Rational :> RATIONAL
+  rational.mlb          MLton basis file for consumers
+test/test.sml           assertion-based test suite
+test/test.mlb           MLton basis file for the tests
+Makefile                build + test (MLton and Poly/ML)
+.github/workflows/ci.yml  CI on both compilers
 ```
 
 ## License
