@@ -52,6 +52,16 @@ sig
 
   val inv : t -> t                                (* reciprocal; raises General.Div on zero *)
 
+  val pow : t * int -> t                          (* integer power; negative -> reciprocal *)
+
+  val floor    : t -> IntInf.int                  (* toward negative infinity *)
+  val ceil     : t -> IntInf.int                  (* toward positive infinity *)
+  val truncate : t -> IntInf.int                  (* toward zero *)
+  val round    : t -> IntInf.int                  (* nearest, ties to even *)
+
+  val sqrt       : t -> t option                  (* exact root of a perfect square *)
+  val sqrtApprox : t * int -> t                   (* a/10^digits approximation *)
+
   val compare : t * t -> order
   val equal   : t * t -> bool
 
@@ -72,6 +82,39 @@ end
 - **`toString` / `fromString`.** Output uses a conventional minus sign
   (`-3/4`), not SML's tilde, and an integral value prints without a denominator
   (`5`, not `5/1`). `fromString` accepts either `-` or `~` as the sign.
+
+### Powers, rounding, and square roots
+
+In addition to the field operations, the library offers exact integer powers,
+rounding to integers, and square roots — all computed over the exact `IntInf`
+representation (no floating point), so results are deterministic and identical
+across compilers.
+
+```sml
+Rational.pow (Rational.fromFrac (3, 2), 3)    (* 27/8 *)
+Rational.pow (Rational.fromFrac (2, 3), ~2)   (* 9/4  (negative exponent -> reciprocal) *)
+
+Rational.floor    (Rational.fromFrac (7, 2))  (* 3  *)
+Rational.ceil     (Rational.fromFrac (7, 2))  (* 4  *)
+Rational.round    (Rational.fromFrac (7, 2))  (* 4  (ties to even) *)
+Rational.truncate (Rational.fromFrac (~7, 2)) (* ~3 (toward zero) *)
+
+Rational.sqrt       (Rational.fromFrac (9, 4))   (* SOME 3/2 (perfect square) *)
+Rational.sqrt       (Rational.fromInt 2)         (* NONE *)
+Rational.sqrtApprox (Rational.fromInt 2, 5)      (* 141421/100000, within 10^~4 *)
+```
+
+- **`pow`.** Exponent is an `int`; `pow (x, 0) = one`, and a negative exponent
+  takes the reciprocal of the positive power. `pow (zero, e)` with `e < 0`
+  raises `General.Div`.
+- **Rounding.** `floor`/`ceil`/`truncate`/`round` each return an `IntInf.int`.
+  `round` uses banker's rounding (ties to even): `round (5/2) = 2`,
+  `round (7/2) = 4`.
+- **`sqrt`.** Returns `SOME r` only for perfect-square rationals (`r*r = x`);
+  every non-square and every negative input yields `NONE`.
+- **`sqrtApprox (x, digits)`.** Returns `a/10^digits` where `a` is the integer
+  square root of `floor (x * 10^(2*digits))` — an under-approximation accurate
+  to `digits` decimal places. Negative `x` raises `General.Div`.
 
 ## Installing with smlpkg
 

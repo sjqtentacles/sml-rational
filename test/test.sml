@@ -127,6 +127,53 @@ fun run () =
     val () = check "fromString \"+3/4\" parses" (R.toString (valOf (R.fromString "+3/4")) = "3/4")
     val () = check "fromString \"0/5\" = 0" (R.toString (valOf (R.fromString "0/5")) = "0")
     val () = check "fromString \" 3/4\" is NONE" (not (isSome (R.fromString " 3/4")))
+
+    (* pow: integer exponent, including negative -> reciprocal *)
+    val () = check "pow (3/2, 3) = 27/8" (R.toString (R.pow (R.fromFrac (i 3, i 2), 3)) = "27/8")
+    val () = check "pow (2/3, -2) = 9/4" (R.toString (R.pow (R.fromFrac (i 2, i 3), ~2)) = "9/4")
+    val () = check "pow (x, 0) = 1" (R.toString (R.pow (R.fromFrac (i 7, i 5), 0)) = "1")
+    val () = check "pow (5, 1) = 5" (R.toString (R.pow (R.fromInt 5, 1)) = "5")
+    val () = check "pow (-2/3, 3) = -8/27" (R.toString (R.pow (R.fromFrac (i ~2, i 3), 3)) = "-8/27")
+    val () = check "pow (-2/3, 2) = 4/9" (R.toString (R.pow (R.fromFrac (i ~2, i 3), 2)) = "4/9")
+    val () = check "pow (zero, -1) raises Div" (raisesDiv (fn () => R.pow (R.zero, ~1)))
+
+    (* Rounding to integers *)
+    val sevenHalves = R.fromFrac (i 7, i 2)
+    val () = check "floor (7/2) = 3" (R.floor sevenHalves = i 3)
+    val () = check "ceil (7/2) = 4" (R.ceil sevenHalves = i 4)
+    val () = check "round (7/2) = 4" (R.round sevenHalves = i 4)
+    val () = check "truncate (-7/2) = -3" (R.truncate (R.fromFrac (i ~7, i 2)) = i ~3)
+    val () = check "floor (-7/2) = -4" (R.floor (R.fromFrac (i ~7, i 2)) = i ~4)
+    val () = check "ceil (-7/2) = -3" (R.ceil (R.fromFrac (i ~7, i 2)) = i ~3)
+    val () = check "floor (5) = 5" (R.floor (R.fromInt 5) = i 5)
+    val () = check "ceil (5) = 5" (R.ceil (R.fromInt 5) = i 5)
+    val () = check "round (5/2) ties to even 2" (R.round (R.fromFrac (i 5, i 2)) = i 2)
+    val () = check "round (7/2) ties to even 4" (R.round sevenHalves = i 4)
+    val () = check "round (1/3) = 0" (R.round (R.fromFrac (i 1, i 3)) = i 0)
+    val () = check "round (2/3) = 1" (R.round (R.fromFrac (i 2, i 3)) = i 1)
+    val () = check "round (-5/2) ties to even -2" (R.round (R.fromFrac (i ~5, i 2)) = i ~2)
+
+    (* Exact square root for perfect squares *)
+    val () = check "sqrt (9/4) = SOME 3/2"
+                   (case R.sqrt (R.fromFrac (i 9, i 4)) of SOME r => R.toString r = "3/2" | NONE => false)
+    val () = check "sqrt (4) = SOME 2"
+                   (case R.sqrt (R.fromInt 4) of SOME r => R.toString r = "2" | NONE => false)
+    val () = check "sqrt (0) = SOME 0"
+                   (case R.sqrt R.zero of SOME r => R.toString r = "0" | NONE => false)
+    val () = check "sqrt (2) = NONE" (not (isSome (R.sqrt (R.fromInt 2))))
+    val () = check "sqrt (1/2) = NONE" (not (isSome (R.sqrt (R.fromFrac (i 1, i 2)))))
+    val () = check "sqrt (-1) = NONE" (not (isSome (R.sqrt (R.fromInt ~1))))
+
+    (* sqrtApprox: within tolerance (exact rational comparison, no floats) *)
+    val approx2 = R.sqrtApprox (R.fromInt 2, 5)
+    val diff2 = R.- (R.* (approx2, approx2), R.fromInt 2)
+    val tol = R.fromFrac (i 1, IntInf.pow (i 10, 4))   (* 10^~4 *)
+    val () = check "sqrtApprox (2, 5)^2 within 10^-4"
+                   (R.compare (R.fromFrac (IntInf.abs (R.numerator diff2), R.denominator diff2), tol) = LESS)
+    val () = check "sqrtApprox (2, 5) underestimates (a^2 <= 2)"
+                   (R.compare (R.* (approx2, approx2), R.fromInt 2) <> GREATER)
+    val () = check "sqrtApprox (9/4, 3) = 3/2 exactly"
+                   (R.equal (R.sqrtApprox (R.fromFrac (i 9, i 4), 3), R.fromFrac (i 3, i 2)))
   in
     print ("\n" ^ Int.toString (!passed) ^ " passed, "
            ^ Int.toString (!failed) ^ " failed\n");
