@@ -160,6 +160,7 @@ exits non-zero if any assertion fails.
 make test        # build + run the suite under MLton
 make test-poly   # run the suite under Poly/ML
 make all-tests   # run under both
+make example     # build + run the demo
 make clean
 ```
 
@@ -167,6 +168,27 @@ This library was built test-first (TDD): the signature and the full test suite
 were written first against a stub implementation, the suite was confirmed to
 compile and fail (red), and the implementation was then filled in until every
 assertion passed (green).
+
+## Example
+
+[`examples/demo.sml`](examples/demo.sml) performs exact arithmetic on a couple
+of fixed fractions, plus a power, a perfect-square root, a decimal-digit root
+approximation, and string parsing. Every result prints as `num/den` (or an
+integer), so the output is identical on every run and on both compilers. Run it
+with:
+
+```
+$ make example
+a = 1/2, b = 1/3
+a + b   = 5/6
+a - b   = 1/6
+a * b   = 1/6
+a / b   = 3/2
+(2/3)^~2= 9/4
+sqrt(9/4) = 3/2
+sqrtApprox(2, 6) = 1414213/1000000
+fromString "6/-8" = -3/4
+```
 
 ## Layout
 
