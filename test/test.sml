@@ -1,15 +1,12 @@
 (* Dependency-free test runner for the Rational structure.
  * Prints one line per assertion and exits non-zero if any assertion fails. *)
 
+structure Tests =
+struct
+
 structure R = Rational
 
-val passed = ref 0
-val failed = ref 0
-
-fun check (name : string) (cond : bool) : unit =
-    if cond
-    then (passed := !passed + 1; print ("ok   - " ^ name ^ "\n"))
-    else (failed := !failed + 1; print ("FAIL - " ^ name ^ "\n"))
+val check = Harness.check
 
 (* True iff `thunk ()` raises General.Div. *)
 fun raisesDiv (thunk : unit -> 'a) : bool =
@@ -175,9 +172,7 @@ fun run () =
     val () = check "sqrtApprox (9/4, 3) = 3/2 exactly"
                    (R.equal (R.sqrtApprox (R.fromFrac (i 9, i 4), 3), R.fromFrac (i 3, i 2)))
   in
-    print ("\n" ^ Int.toString (!passed) ^ " passed, "
-           ^ Int.toString (!failed) ^ " failed\n");
-    OS.Process.exit (if !failed = 0 then OS.Process.success else OS.Process.failure)
+    Harness.run ()
   end
 
-val () = run ()
+end
