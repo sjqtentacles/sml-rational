@@ -171,6 +171,89 @@ fun run () =
                    (R.compare (R.* (approx2, approx2), R.fromInt 2) <> GREATER)
     val () = check "sqrtApprox (9/4, 3) = 3/2 exactly"
                    (R.equal (R.sqrtApprox (R.fromFrac (i 9, i 4), 3), R.fromFrac (i 3, i 2)))
+
+    val () = Harness.section "Rational: properties (sml-check, seed 0wx1)"
+    val seed : Check.seed = 0wx1
+
+    (* Generators: numerator over a wide-ish signed range, denominator
+       strictly positive and nonzero, both lifted from bounded `int` ranges
+       to `IntInf.int` so exact arithmetic never overflows. *)
+    val genNum = Check.map IntInf.fromInt (Check.choose (~1000000, 1000000))
+    val genDen = Check.map IntInf.fromInt (Check.choose (1, 1000000))   (* strictly positive, never 0 *)
+    val genFrac : (IntInf.int * IntInf.int) Check.gen = Check.tuple2 (genNum, genDen)
+    fun mkR (n, d) = R.fromFrac (n, d)
+    val genR : R.t Check.gen = Check.map mkR genFrac
+
+    fun showFrac (n, d) = IntInf.toString n ^ "/" ^ IntInf.toString d
+    fun showFracPair ((n1, d1), (n2, d2)) =
+      "(" ^ showFrac (n1, d1) ^ ", " ^ showFrac (n2, d2) ^ ")"
+    fun showR r = R.toString r
+    fun showRPair (a, b) = "(" ^ showR a ^ ", " ^ showR b ^ ")"
+
+    (* a + b - b = a *)
+    val () =
+      Harness.check "prop: a + b - b = a"
+        (case Check.quickCheck
+                (Check.forAll (Check.tuple2 (genR, genR)) showRPair
+                   (fn (a, b) => R.equal (R.- (R.+ (a, b), b), a))) of
+             Check.Passed _ => true
+           | Check.Failed _ => false)
+
+    (* a * b commutes *)
+    val () =
+      Harness.check "prop: a * b commutes"
+        (case Check.quickCheck
+                (Check.forAll (Check.tuple2 (genR, genR)) showRPair
+                   (fn (a, b) => R.equal (R.* (a, b), R.* (b, a)))) of
+             Check.Passed _ => true
+           | Check.Failed _ => false)
+
+    (* fromFrac reduces to lowest terms: compare against a local naive
+       gcd-based reference, independent of the library's own reduction. *)
+    fun gcdI (a : IntInf.int, b : IntInf.int) =
+      if b = 0 then IntInf.abs a else gcdI (b, IntInf.mod (a, b))
+    (* normalize (n, d) the same way the library promises to: den > 0,
+       gcd(|n|, d) = 1 *)
+    fun naiveReduce (n : IntInf.int, d : IntInf.int) =
+      let
+        val (n, d) = if d < 0 then (IntInf.~ n, IntInf.~ d) else (n, d)
+        val g = gcdI (n, d)
+        val g = if g = 0 then 1 else g
+      in (IntInf.quot (n, g), IntInf.quot (d, g)) end
+
+    (* denominator generator excluding 0, with an independent random sign *)
+    val genDenNZ : IntInf.int Check.gen =
+      Check.map2 (fn s => fn d => if s then d else IntInf.~ d) Check.bool genDen
+    val genFracAny : (IntInf.int * IntInf.int) Check.gen =
+      Check.tuple2 (genNum, genDenNZ)
+
+    val () =
+      Harness.check "prop: fromFrac reduces to lowest terms"
+        (case Check.quickCheck
+                (Check.forAll genFracAny showFrac
+                   (fn (n, d) =>
+                      let val r = R.fromFrac (n, d)
+                      in naiveReduce (n, d) = (R.numerator r, R.denominator r) end)) of
+             Check.Passed _ => true
+           | Check.Failed _ => false)
+
+    (* compare agrees with cross-multiplication *)
+    val genFracPair : ((IntInf.int * IntInf.int) * (IntInf.int * IntInf.int)) Check.gen =
+      Check.tuple2 (genFrac, genFrac)
+
+    val () =
+      Harness.check "prop: compare agrees with cross-multiplication"
+        (case Check.quickCheck
+                (Check.forAll genFracPair showFracPair
+                   (fn ((n1, d1), (n2, d2)) =>
+                      let
+                        val a = R.fromFrac (n1, d1)
+                        val b = R.fromFrac (n2, d2)
+                      in
+                        R.compare (a, b) = IntInf.compare (n1 * d2, n2 * d1)
+                      end)) of
+             Check.Passed _ => true
+           | Check.Failed _ => false)
   in
     Harness.run ()
   end
